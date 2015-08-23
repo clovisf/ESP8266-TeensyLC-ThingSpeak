@@ -1,13 +1,17 @@
+#include "DHT.h"
+#define DHTPIN 2     // what pin we're connected to
+#define DHTTYPE DHT11   // DHT 11
+DHT dht(DHTPIN, DHTTYPE);
+
+#include <Wire.h>
+#include <Adafruit_BMP085.h> // BMP085 pressure sensor
+Adafruit_BMP085 bmp;
+
 // Variables used on the "delay" function
 unsigned long time;
 unsigned long previousTime;
 boolean enterFunction= true;
 //-----------------------
-
-#include "DHT.h"
-#define DHTPIN 2
-#define DHTTYPE DHT11   // DHT 11 
-DHT dht(DHTPIN, DHTTYPE);
 
 int ntc5k = A0;
 float value_ntc5k;
@@ -17,19 +21,27 @@ int ldr = A2;
 float value_ldr;
 int lm35 = A3;
 float value_lm35;
+float value_temp_BMP;
+float value_altitude_BMP;
+float value_pressure_BMP;
 
 //*-- IoT Information
-#define SSID "your network SSID here"
-#define PASS "your network password here"
+#define SSID "FRITZEN"
+#define PASS "3649-9334Js"
 #define IP "184.106.153.149" // ThingSpeak IP Address: 184.106.153.149
 
 // GET /update?key=[THINGSPEAK_KEY]&field1=[data 1]&field2=[data 2]...;
-String GET = "GET /update?key=YourThingsPeakIDhere";
+String GET = "GET /update?key=VS3CGGU88I4F3VX4";
 
 void setup() {
-   Serial2.begin(9600);
+  Serial2.begin(9600);
   Serial.begin(115200);
   dht.begin();
+
+  if (!bmp.begin()) {
+  Serial.println("Could not find a valid BMP085 sensor, check wiring!");
+  while (1) {}
+  }
 
   sendDebug("AT");
   delay(2000); // changed from 5000 to 2000
@@ -50,47 +62,57 @@ void loop() {
     // Start your code below 
     //-----------------------
 
-    // Reading temperature or humidity takes about 250 milliseconds!
+
+  // Reading temperature or humidity takes about 250 milliseconds!
   // Sensor readings may also be up to 2 seconds 'old' (its a very slow sensor)
   float h = dht.readHumidity();
-  // Read temperature as Celsius
+  // Read temperature as Celsius (the default)
   float t = dht.readTemperature();
-  // Read temperature as Fahrenheit
-  float f = dht.readTemperature(true);
-  float hi = dht.computeHeatIndex(f, h);
-  // Check if any reads failed and exit early (to try again).
-  if (isnan(h) || isnan(t) || isnan(f)) {
+  // Read temperature as Fahrenheit (isFahrenheit = true)
+  if (isnan(h) || isnan(t)) {
     Serial.println("Failed to read from DHT sensor!");
     return;
   }
+  // Compute heat index in Celsius (isFahreheit = false)
+  float hic = dht.computeHeatIndex(t, h, false);
   
+ 
   value_ntc5k = analogRead(ntc5k); // curve fitting for the NTC
   value_ntc5k = ((value_ntc5k*0.1002)-23.859)*1.1201; // curve fitting for the NTC
   value_kty81 = analogRead(sensor_kty81);
-  value_kty81 = (0.6092*value_kty81)-421.62; 
+  value_kty81 = ((0.6092*value_kty81)-421.62)-4.2; 
   value_ldr = (analogRead(ldr)*1/0.097752)/100; // making LDR value a percentual (0-100%)
   value_lm35 = analogRead(lm35)/3.081664;
+  value_temp_BMP = bmp.readTemperature(); // BMP085 temperature
+  value_pressure_BMP = bmp.readPressure(); // BMP085 pressure
+  value_altitude_BMP = bmp.readAltitude(); // BMP085 altitude 
   String temp =String(value_ntc5k);// turn integer to string
   String temp2 =String(value_lm35);
-  String light= String(value_kty81);// turn integer to string
-  String humid=String(value_ldr);// turn integer to string
-  updateTS(temp,temp2,light, humid);
+  String temp3= String(value_kty81);// turn integer to string
+  String ldrlight=String(value_ldr);// turn integer to string
+  String humid=String(h); //DHT11 humidity
+  String temp4=String(t);
+  String temp5=String(value_temp_BMP);
+  String pressure=String(value_pressure_BMP);
+  //String altitude1=String(value_altitude_BMP); 
+  updateTS(temp,temp2,temp3,temp4,temp5,ldrlight,humid,pressure);
   Serial.println(value_ntc5k);
   Serial.println(value_kty81);
   Serial.println(value_ldr);
-  Serial.print("Humidity: "); 
+
+  Serial.print("Humidity: ");
   Serial.print(h);
   Serial.print(" %\t");
-  Serial.print("Temperature: "); 
+  Serial.print("Temperature: ");
   Serial.print(t);
   Serial.print(" *C ");
   
-   //-----------------------
-    // End of your code
+  //-----------------------
+  // End of your code
   }
   
   // The DELAY time is adjusted in the constant below >> 
-  if (time - previousTime < 9999990){ // 1 million microsencods= 1 second delay
+  if (time - previousTime < 19999990){ // 1 million microsencods= 1 second delay
     /* I have actually used 0.999990 seconds, in a trial to compensate the time that
        this IF function takes to be executed. this is really a point that
        need improvement in my code */   
@@ -102,7 +124,7 @@ void loop() {
   
 }
 //----- update the  Thingspeak string with 3 values
-void updateTS( String T, String S, String L , String H)
+void updateTS( String A, String B, String C , String D, String E, String F, String G, String H)
 {
   // ESP8266 Client
   String cmd = "AT+CIPSTART=\"TCP\",\"";// Setup TCP connection
@@ -116,7 +138,7 @@ void updateTS( String T, String S, String L , String H)
     return;
   }
 
-  cmd = GET + "&field1=" + T +"&field2="+ S + "&field3=" + L +"&field4=" + H +"\r\n";
+  cmd = GET + "&field1=" + A +"&field2="+ B + "&field3=" + C +"&field4=" + D +"&field5=" + E +"&field6=" + F +"&field7=" + G +"&field8=" + H +"\r\n";
   Serial2.print( "AT+CIPSEND=" );
   Serial2.println( cmd.length() );
   if(Serial2.find( ">" ) )
