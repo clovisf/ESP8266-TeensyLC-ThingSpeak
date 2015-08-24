@@ -15,8 +15,8 @@ boolean enterFunction= true;
 
 int ntc5k = A0;
 float value_ntc5k;
-int sensor_kty81 = A1;
-float value_kty81;
+int UVsensor = A1;
+float UVlight;
 int ldr = A2;
 float value_ldr;
 int lm35 = A3;
@@ -24,6 +24,7 @@ float value_lm35;
 float value_temp_BMP;
 float value_altitude_BMP;
 float value_pressure_BMP;
+float UVvalue;
 
 //*-- IoT Information
 #define SSID "FRITZEN"
@@ -79,25 +80,24 @@ void loop() {
  
   value_ntc5k = analogRead(ntc5k); // curve fitting for the NTC
   value_ntc5k = ((value_ntc5k*0.1002)-23.859)*1.1201; // curve fitting for the NTC
-  value_kty81 = analogRead(sensor_kty81);
-  value_kty81 = ((0.6092*value_kty81)-421.62)-4.2; 
   value_ldr = (analogRead(ldr)*1/0.097752)/100; // making LDR value a percentual (0-100%)
   value_lm35 = analogRead(lm35)/3.081664;
   value_temp_BMP = bmp.readTemperature(); // BMP085 temperature
   value_pressure_BMP = bmp.readPressure(); // BMP085 pressure
   value_altitude_BMP = bmp.readAltitude(); // BMP085 altitude 
+  UVlight=analogRead(UVsensor)*0.00495161; //UV index
   String temp =String(value_ntc5k);// turn integer to string
   String temp2 =String(value_lm35);
-  String temp3= String(value_kty81);// turn integer to string
+  String UVunit= String(UVlight);// turn integer to string
   String ldrlight=String(value_ldr);// turn integer to string
   String humid=String(h); //DHT11 humidity
-  String temp4=String(t);
-  String temp5=String(value_temp_BMP);
+  String temp3=String(t);
+  String temp4=String(value_temp_BMP);
   String pressure=String(value_pressure_BMP);
   //String altitude1=String(value_altitude_BMP); 
-  updateTS(temp,temp2,temp3,temp4,temp5,ldrlight,humid,pressure);
+  updateTS(temp,temp2,temp3,temp4,ldrlight,humid,pressure,UVunit);
   Serial.println(value_ntc5k);
-  Serial.println(value_kty81);
+  Serial.println(UVlight);
   Serial.println(value_ldr);
 
   Serial.print("Humidity: ");
