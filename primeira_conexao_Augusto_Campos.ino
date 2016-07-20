@@ -1,8 +1,8 @@
 
 const byte CH_PD=5;
 const byte RST=6;
-#define rede "fritzen"
-#define senha "familiafritzen"
+#define rede "SuaRedeWiFi"
+#define senha "SenhaDoWiFi"
 
 void setup() {
   Serial.begin(115200);
